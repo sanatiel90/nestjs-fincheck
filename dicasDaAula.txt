@@ -1,0 +1,69 @@
+# REGRAS DE NEGÓCIO x VALIDAÇÕES
+- regras de negócio da app você preferencialmente deve colocar no SERVICE; regras como: encriptação de senha, verificação se email já existe (pois sua regra de negócio diz
+  que o email precisa ser único).
+- já a validação de dados enviados pelo client deve ser preferencialmente tratada no controller (ou nos PIPES); validações como ver se o email, name e password, que são
+  campos obrigatórios, estão preenchidos no DTO, e se estão no tipo de dado (string, number, etc) correto.   
+
+# PIPE
+- É uma camada que fica entre a requisição feita pelo client e o controller que vai receber a requisição; no Pipe os dados enviados pelo cliente podem ser VALIDADOS, 
+  permitindo ou não que sejam enviados para o controller, ou podem ser MODIFICADOS, fazendo com que cheguem ao controller de forma diferente do que foi enviado pelo cliente.
+- Fluxo com Pipe:
+Request -> Pipe -> UsersController.create -> UsersService.create
+- Para usar basta instalar a lib do "class-validator", colocar nos DTOs os decorators de validação em cada campo e colocar nas rotas dos controllers o decorator 
+  @UsePipes(new ValidationPipe()); se você não quiser colocar o decorator de @UsePipes em cada rota do controller, pode setá-lo globalmente no arquivo main.ts,
+  usando o código "app.useGlobalPipes(new ValidationPipe());"
+
+# GUARDS
+- Também é uma camada que fica entre a requisição feita pelo client e o controller que vai receber a requisição; no caso do Guard ele funciona parecido com um middleware: o
+  Guard vai analisar se informação vinda da Request é válida para ir para o controller, e se não for válida ele vai lançar uma exception para não permitir que o fluxo continue.
+  O Guard pode ser usado por exemplo para verificar se uma Request possui o token JWT de autenticacao necessário para acessar uma rota privada; caso nao tenha ele lança 
+  uma UnauthorizedException, e caso tenha o token ele pode adicionar ao Request da aplicacao a informação do payload do token (como o id do user), para que essa informação
+  fique disponível em toda a app.   
+
+
+# CONCEITO DE MODULOS
+- Módulos recebem um objeto de config, que pode ter 4 parametros:
+ * controllers: aqui são todos os controllers que o modulo usa 
+ * providers: aqui são os Services, Repositories (e geralmente tudo que não é controller) que o modulo usa; as classes providers precisam implementar a interface @Injectable()
+ * imports: aqui são outros modulos que este modulo usa; as vezes um modulo não vai usar apenas Services ou Controllers, mas sim Módulos inteiros; 
+ * exports: aqui é usado quando este modulo usa um provider (Services, Repositories, etc), e as funcionalidades desse provider vão ser usadas por outro modulo que vai
+            importar o modulo corrente. Quando, por exemplo, o ModuloA importa o ModuloB (imports: [ModuloB]), e o ModuloA vai usar um provider presente no ModuloB, é preciso
+            que o ModuloB exporte esses providers que serão usados no ModuloA
+- Exemplos de uso:
+
+* AppModule
+@Module({
+  imports: [UsersModule, DatabaseModule],
+  controllers: [],
+  providers: [],
+})
+
+* UsersModule
+@Module({
+  imports: [DatabaseModule],
+  controllers: [UsersController],
+  providers: [UsersService],
+})
+
+* DatabaseModule
+@Module({
+  providers: [PrismaService, UsersRepository],
+  exports: [UsersRepository],
+})
+
+- Alguns módulos podem ser setados como globais, usando a notação @Global(), assim ficando automaticamente visiveis para todos os outros modulos da app, nao precisando 
+  q os outros modulos usam o param 'imports: []' para usa-lo. Exemplo:
+
+* DatabaseModule
+@Global() 
+@Module({
+  providers: [PrismaService, UsersRepository],
+  exports: [UsersRepository],
+})
+
+* UsersModule
+@Module({
+  ////imports: [DatabaseModule],  -> nao precisa mais desse imports
+  controllers: [UsersController],
+  providers: [UsersService],
+})
