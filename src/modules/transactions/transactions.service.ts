@@ -5,6 +5,7 @@ import { TransactionsRepository } from '../../shared/database/repositories/trans
 import { ValidateBankAccountOwnershipService } from '../bank-accounts/validate-bank-account-ownership.service';
 import { ValidateCategoryOwnershipService } from '../categories/validate-category-ownership.service';
 import { ValidateTransactionOwnershipService } from './validate-transaction-ownership.service';
+import { TransactionType } from '@prisma/client';
 
 @Injectable()
 export class TransactionsService {
@@ -34,16 +35,26 @@ export class TransactionsService {
     });
   }
 
-  findAllByUserId(userId: string) {
+  findAllByUserId(
+    userId: string,
+    filters: {
+      month: number;
+      year: number;
+      bankAccountId?: string;
+      type?: TransactionType;
+    },
+  ) {
     return this.transactionsRepository.findAll({
       where: {
         userId,
+        bankAccountId: filters.bankAccountId,
+        type: filters.type,
+        date: {
+          gte: new Date(Date.UTC(filters.year, filters.month)), //greater than and equal; usando esse Date.UTC para ignorar o TIMEZONE, q da problema na data
+          lt: new Date(Date.UTC(filters.year, filters.month + 1)), //lesser than
+        },
       },
     });
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} transaction`;
   }
 
   update(
@@ -51,7 +62,8 @@ export class TransactionsService {
     transactionId: string,
     updateTransactionDto: UpdateTransactionDto,
   ) {
-    const { bankAccountId, categoryId } = updateTransactionDto;
+    const { bankAccountId, categoryId, date, name, value, type } =
+      updateTransactionDto;
 
     this.validateEntitesOwnership({
       userId,
@@ -60,12 +72,25 @@ export class TransactionsService {
       transactionId,
     });
 
-    return `This action updates a #${transactionId} transaction`;
+    return this.transactionsRepository.update({
+      where: { id: transactionId },
+      data: {
+        bankAccountId,
+        categoryId,
+        date,
+        name,
+        type,
+        value,
+      },
+    });
   }
 
-  remove(id: number) {
-    return `This acti
-    on removes a #${id} transaction`;
+  async remove(userId: string, transactionId: string) {
+    await this.validateEntitesOwnership({ userId, transactionId });
+    await this.transactionsRepository.delete({
+      where: { id: transactionId },
+    });
+    return null;
   }
 
   //metodo privado para executar as validacoes de pertencimento de bankAccounts e Categories
@@ -76,19 +101,24 @@ export class TransactionsService {
     transactionId,
   }: {
     userId: string;
-    bankAccountId: string;
-    categoryId: string;
+    bankAccountId?: string;
+    categoryId?: string;
     transactionId?: string;
   }) {
-    //forma de executar ao msm tempo varias chamadas que retornam uma Promise; o primeiro validate chamado so vai ser executado se transactionId tiver sido importado
+    //forma de executar ao msm tempo varias chamadas que retornam uma Promise; cada validate so vai ser executado se o ID em questao tiver sido passado
     await Promise.all([
       transactionId &&
         this.validateTransactionOwnershipService.validate(
           userId,
           transactionId,
         ),
-      this.validateBankAccountOwnershipService.validate(userId, bankAccountId),
-      this.validateCategoryOwnershipService.validate(userId, categoryId),
+      bankAccountId &&
+        this.validateBankAccountOwnershipService.validate(
+          userId,
+          bankAccountId,
+        ),
+      categoryId &&
+        this.validateCategoryOwnershipService.validate(userId, categoryId),
     ]);
   }
 }

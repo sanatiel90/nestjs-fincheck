@@ -17,4 +17,12 @@ export class TransactionsRepository {
   findFirst(findFirstDTO: Prisma.TransactionFindFirstArgs) {
     return this.prismaService.transaction.findFirst(findFirstDTO);
   }
+
+  update(updateDTO: Prisma.TransactionUpdateArgs) {
+    return this.prismaService.transaction.update(updateDTO);
+  }
+
+  delete(deleteDTO: Prisma.TransactionDeleteArgs) {
+    return this.prismaService.transaction.delete(deleteDTO);
+  }
 }

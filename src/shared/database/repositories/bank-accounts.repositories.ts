@@ -10,7 +10,11 @@ export class BankAccountsRepository {
     return this.prismaService.bankAccount.create(createDTO);
   }
 
-  findAll(findAllDTO: Prisma.BankAccountFindManyArgs) {
+  //essa viagem aqui é pra conseguir acessar tabelas intermediarias dentro do codigo, numa relacao one to many, e ainda precisou mudar o tsconfig.json
+  findAll<T extends Prisma.BankAccountFindManyArgs>(
+    findAllDTO: Prisma.SelectSubset<T, Prisma.BankAccountFindManyArgs>,
+  ) {
+    console.log('a');
     return this.prismaService.bankAccount.findMany(findAllDTO);
   }
 

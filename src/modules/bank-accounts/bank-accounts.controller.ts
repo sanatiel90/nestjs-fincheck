@@ -53,10 +53,4 @@ export class BankAccountsController {
   ) {
     return this.bankAccountsService.remove(userId, bankAccountId);
   }
-
-  //TO DO
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.bankAccountsService.findOne(+id);
-  }
 }
