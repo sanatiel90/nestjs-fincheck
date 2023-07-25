@@ -57,7 +57,7 @@ export class TransactionsService {
     });
   }
 
-  update(
+  async update(
     userId: string,
     transactionId: string,
     updateTransactionDto: UpdateTransactionDto,
@@ -65,7 +65,7 @@ export class TransactionsService {
     const { bankAccountId, categoryId, date, name, value, type } =
       updateTransactionDto;
 
-    this.validateEntitesOwnership({
+    await this.validateEntitesOwnership({
       userId,
       bankAccountId,
       categoryId,
